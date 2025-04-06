@@ -1,0 +1,142 @@
+import nltk # import libraries
+import spacy
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+# Sample Resume
+resume_1 = """
+John Doe is a Machine Learning Engineer with 3 years of experience in Python, Scikit-learn, and TensorFlow.
+He has built scalable ML models for image classification and worked with data pipelines and cloud services.
+"""
+
+# Sample Job Description
+job_description = """
+We are looking for a Machine Learning Engineer with experience in Python, TensorFlow, and deploying models in production.
+Candidates should have a strong background in data preprocessing and model evaluation.
+"""
+
+nlp = spacy.load("en_core_web_sm") # NLP  preprocessing
+
+def preprocess(text):
+    doc = nlp(text.lower())
+    tokens = [token.lemma_ for token in doc if token.is_alpha and not token.is_stop]
+    return ' '.join(tokens)
+
+resume_text = preprocess(resume_1) # Resume and JD embedding + matching
+jd_text = preprocess(job_description)
+
+corpus = [resume_text, jd_text]
+
+vectorizer = TfidfVectorizer()
+tfidf_matrix = vectorizer.fit_transform(corpus)
+
+similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+print(f"🧠 Resume to JD Match Score: {round(similarity * 100, 2)}%")
+
+skills_list = ['python', 'tensorflow', 'scikit-learn', 'data preprocessing', 'cloud', 'deployment'] # extract skills
+
+def extract_skills(text, keywords):
+    return [skill for skill in keywords if skill in text.lower()]
+
+candidate_skills = extract_skills(resume_1, skills_list)
+required_skills = extract_skills(job_description, skills_list)
+
+print("✅ Candidate Skills:", candidate_skills)
+print("✅ Required Skills:", required_skills)
+
+def skill_gap(required, candidate): # skill gap analysis
+    return list(set(required) - set(candidate))
+
+missing_skills = skill_gap(required_skills, candidate_skills)
+print("⚠️ Missing Skills:", missing_skills)
+
+# Score is weighted: 70% match score + 30% skill coverage
+skill_coverage = (len(candidate_skills) / len(required_skills)) if required_skills else 0
+final_score = (similarity * 0.7) + (skill_coverage * 0.3)
+
+print(f"🏆 Final Candidate Score: {round(final_score * 100, 2)}%")
+!pip install matplotlib seaborn wordcloud
+
+resumes = [
+    {
+        "name": "John Doe",
+        "text": """
+        Machine Learning Engineer with experience in Python, TensorFlow, cloud deployment, and Scikit-learn.
+        """
+    },
+    {
+        "name": "Jane Smith",
+        "text": """
+        Data Scientist skilled in R, Python, Tableau, and statistical modeling with 5 years of experience.
+        """
+    },
+    {
+        "name": "Alice Johnson",
+        "text": """
+        Software Engineer with experience in Java, Spring Boot, and REST APIs. Recently transitioned into ML.
+        """
+    }
+]
+
+job_description = """
+Looking for a Machine Learning Engineer with experience in Python, TensorFlow, Scikit-learn, and cloud deployment.
+"""
+
+import spacy
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+nlp = spacy.load("en_core_web_sm")
+skills_list = ['python', 'tensorflow', 'scikit-learn', 'cloud', 'deployment']
+
+def preprocess(text):
+    doc = nlp(text.lower())
+    return ' '.join([token.lemma_ for token in doc if token.is_alpha and not token.is_stop])
+
+def extract_skills(text):
+    return [skill for skill in skills_list if skill in text.lower()]
+
+# Preprocess job description
+jd_processed = preprocess(job_description)
+results = []
+
+for resume in resumes:
+    resume_processed = preprocess(resume['text'])
+    vectorizer = TfidfVectorizer()
+    tfidf = vectorizer.fit_transform([resume_processed, jd_processed])
+    sim_score = cosine_similarity(tfidf[0:1], tfidf[1:2])[0][0]
+
+    candidate_skills = extract_skills(resume['text'])
+    required_skills = extract_skills(job_description)
+    skill_coverage = len(candidate_skills) / len(required_skills) if required_skills else 0
+    final_score = (sim_score * 0.7) + (skill_coverage * 0.3)
+
+    results.append({
+        "name": resume['name'],
+        "match_score": sim_score,
+        "skill_coverage": skill_coverage,
+        "final_score": final_score,
+        "missing_skills": list(set(required_skills) - set(candidate_skills))
+    })
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+df = pd.DataFrame(results)
+plt.figure(figsize=(10, 5))
+sns.barplot(data=df, x="name", y="final_score", palette="viridis")
+plt.title("Final Candidate Scores")
+plt.ylabel("Score (0 to 1)")
+plt.ylim(0, 1)
+plt.show()
+
+plt.figure(figsize=(10, 5))
+sns.scatterplot(data=df, x="match_score", y="skill_coverage", hue="name", s=100)
+plt.title("Resume vs Skill Match")
+plt.xlabel("Resume–JD Similarity")
+plt.ylabel("Skill Coverage")
+plt.xlim(0, 1)
+plt.ylim(0, 1)
+plt.grid(True)
+plt.show()
